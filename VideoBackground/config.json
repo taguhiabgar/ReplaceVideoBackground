@@ -1,4 +1,5 @@
 {
   "main_video": "testVideo.mp4",
-  "other_videos": ["speakingMan.mp4"]
+  "other_videos": ["speakingMan.mp4"],
+  "random_frames": 7
 }

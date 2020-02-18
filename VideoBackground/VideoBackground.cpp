@@ -5,21 +5,20 @@
 #include <vector>
 #include "json.h"
 
-using namespace std;
 using namespace cv;
 using json = nlohmann::json;
 
 void displayVideo(VideoCapture& video);
 
-int computeMedian(vector<int> elements);
+int computeMedian(std::vector<int> elements);
 
 cv::Mat computeMedianImage(std::vector<cv::Mat> vec);
 
 // subtracts background from `video` and saves in passed image `background`
-void subtractBackground(VideoCapture& video, Mat& background);
+void subtractBackground(VideoCapture& video, Mat& background, int randomFramesCount);
 
 // substitutes the passed `background` image to `second` video and saves the result in `output` video
-void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& output);
+void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& output, int randomFramesCount);
 
 bool almostBlack(cv::Vec3b& color);
 
@@ -32,6 +31,7 @@ int main() {
 	configFile >> config;
 
 	std::string mainVideoPath = config["main_video"];
+	int randomFramesCount = config["random_frames"];
 	std::vector<std::string> otherVideoPaths;
 	for (const std::string& elem : config["other_videos"]) {
 		otherVideoPaths.push_back(elem);
@@ -49,7 +49,7 @@ int main() {
 	Mat firstVideoBackground;
 
 	// subtract the video background and save to `background`
-	subtractBackground(firstVideo, firstVideoBackground); // todo: add bool print progress = true
+	subtractBackground(firstVideo, firstVideoBackground, randomFramesCount); // todo: add bool print progress = true
 
 	// save median image to file 
 
@@ -57,7 +57,7 @@ int main() {
 
 	for (VideoCapture& elem : videos) {
 		VideoCapture output;
-		substituteBackground(firstVideoBackground, elem, output);
+		substituteBackground(firstVideoBackground, elem, output, randomFramesCount);
 	}
 
 	// close all videos
@@ -71,12 +71,12 @@ int main() {
 
 // substitutes the passed `background` image to `second` video and saves the result in `output` video
 // does not modify `video`
-void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& output) {
+void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& output, int randomFramesCount) {
 
 	Mat videoBackground;
 
 	// subtract the background of `video` and save to `videoBackground` image
-	subtractBackground(video, videoBackground);
+	subtractBackground(video, videoBackground, randomFramesCount);
 	
 	output = video;
 
@@ -139,18 +139,18 @@ bool almostBlack(cv::Vec3b& color) {
 }
 
 // subtracts background from the video and saves in passed image `background`
-void subtractBackground(VideoCapture& video, Mat& background) {
+void subtractBackground(VideoCapture& video, Mat& background, int randomFramesCount) {
 	if (!video.isOpened()) {
-		cerr << "Error opening video file" << endl;
+		std::cerr << "Error opening video file" << std::endl;
 	}
 
 	// select frames randomly
-	default_random_engine randomEngine;
-	uniform_int_distribution<int> distribution(0, video.get(CAP_PROP_FRAME_COUNT));
+	std::default_random_engine randomEngine;
+	std::uniform_int_distribution<int> distribution(0, video.get(CAP_PROP_FRAME_COUNT));
 
-	vector<Mat> frames;
+	std::vector<Mat> frames;
 	
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < randomFramesCount; i++) {
 		int fid = distribution(randomEngine);
 		video.set(CAP_PROP_POS_FRAMES, fid);
 		Mat frame;
@@ -182,7 +182,7 @@ void displayVideo(VideoCapture& video) {
 	}
 }
 
-int computeMedian(vector<int> elements) {
+int computeMedian(std::vector<int> elements) {
 	nth_element(elements.begin(), elements.begin() + elements.size() / 2, elements.end());
 	// sort(elements.begin(),elements.end());
 	return elements[elements.size() / 2];
@@ -195,7 +195,7 @@ cv::Mat computeMedianImage(std::vector<cv::Mat> images) {
 
 	for (int row = 0; row < height; row++) {
 		if (row % 20 == 0) {
-			cout << "processed: " << (int)(row * 100.0 / height) << "%" << endl;
+			std::cout << "processed: " << (int)(row * 100.0 / height) << "%" << std::endl;
 		}
 		for (int col = 0; col < width; col++) {
 			std::vector<int> blues, greens, reds;
