@@ -9,9 +9,6 @@ using namespace std;
 using namespace cv;
 using json = nlohmann::json;
 
-
-void displayImage(Mat& image);
-
 void displayVideo(VideoCapture& video);
 
 int computeMedian(vector<int> elements);
@@ -33,7 +30,6 @@ int main() {
 	std::ifstream configFile("config.json");
 	json config;
 	configFile >> config;
-	cout << config["main_video"];
 
 	std::string mainVideoPath = config["main_video"];
 	std::vector<std::string> otherVideoPaths;
@@ -50,15 +46,10 @@ int main() {
 		videos.push_back(VideoCapture(path));
 	}
 
-	// ****************************************
-
 	Mat firstVideoBackground;
 
 	// subtract the video background and save to `background`
 	subtractBackground(firstVideo, firstVideoBackground); // todo: add bool print progress = true
-
-	// show median frame
-	//displayImage(firstVideoBackground);
 
 	// save median image to file 
 
@@ -67,12 +58,6 @@ int main() {
 	for (VideoCapture& elem : videos) {
 		VideoCapture output;
 		substituteBackground(firstVideoBackground, elem, output);
-
-		// show video 
-		displayVideo(output);
-
-		// todo: save output video 
-		// ...
 	}
 
 	// close all videos
@@ -95,6 +80,14 @@ void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& ou
 	
 	output = video;
 
+	int frameWidth = output.get(CV_CAP_PROP_FRAME_WIDTH);
+	int frameHeight = output.get(CV_CAP_PROP_FRAME_HEIGHT);
+
+	// reset frame counter
+	output.set(CAP_PROP_POS_FRAMES, 0);
+
+	VideoWriter videoWriter("outcpp.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10, Size(frameWidth, frameHeight));
+
 	while (true) {
 		Mat frame;
 
@@ -104,7 +97,7 @@ void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& ou
 			break;
 		}
 
-		// Calculate absolute difference of current frame and the background of video
+		// compute absolute difference of current `frame` and the background of video
 		Mat diffFrame;
 		absdiff(frame, videoBackground, diffFrame);
 
@@ -112,23 +105,23 @@ void substituteBackground(Mat& background, VideoCapture& video, VideoCapture& ou
 		int width = frame.cols;
 
 		// replace all (almost) black pixels of `diffFrame` with the corresponding pixels of `background`
-		// (almost) non-black pixels indicate the places where objects are moving
+		// non-black pixels indicate the places where objects are moving
 		for (int row = 0; row < height; ++row) {
 			for (int col = 0; col < width; ++col) {
 				cv::Vec3b color = diffFrame.at<cv::Vec3b>(row, col);
 				if (almostBlack(color)) {
-					diffFrame.at<cv::Vec3b>(row, col) = background.at<cv::Vec3b>(row, col);
-				}
-				else {
-					diffFrame.at<cv::Vec3b>(row, col) = frame.at<cv::Vec3b>(row, col);
+					frame.at<cv::Vec3b>(row, col) = background.at<cv::Vec3b>(row, col);
+				} else {
+					frame.at<cv::Vec3b>(row, col) = frame.at<cv::Vec3b>(row, col);
 				}
 			}
 		}
 
-		// show `diffFrame`
-		imshow("frame", diffFrame);
-		waitKey(20);
+		videoWriter.write(frame);
 	}
+
+	// release the write object
+	videoWriter.release();
 }
 
 bool almostBlack(cv::Vec3b& color) {
@@ -172,16 +165,6 @@ void subtractBackground(VideoCapture& video, Mat& background) {
 	background = computeMedianImage(frames);
 }
 
-void displayImage(Mat& image) {
-	if (!image.data) {
-		cout << "Could not open or find the image" << std::endl;
-		return;
-	}
-
-	namedWindow("Display window", WINDOW_AUTOSIZE); // create window
-	imshow("Display window", image); // show the image inside the window
-}
-
 void displayVideo(VideoCapture& video) {
 	// reset frame number to 0
 	video.set(CAP_PROP_POS_FRAMES, 0);
@@ -196,8 +179,6 @@ void displayVideo(VideoCapture& video) {
 
 		// show the resulting frame
 		imshow("Frame", frame);
-
-		//waitKey(25);
 	}
 }
 
