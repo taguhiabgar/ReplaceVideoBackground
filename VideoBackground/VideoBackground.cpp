@@ -8,8 +8,6 @@
 using namespace cv;
 using json = nlohmann::json;
 
-void displayVideo(VideoCapture& video);
-
 int computeMedian(std::vector<int> elements);
 
 cv::Mat computeMedianImage(std::vector<cv::Mat> vec);
@@ -163,23 +161,6 @@ void subtractBackground(VideoCapture& video, Mat& background, int randomFramesCo
 
 	// compute median image of randomly selected frames
 	background = computeMedianImage(frames);
-}
-
-void displayVideo(VideoCapture& video) {
-	// reset frame number to 0
-	video.set(CAP_PROP_POS_FRAMES, 0);
-
-	while (true) {
-		Mat frame;
-		video >> frame;
-
-		if (frame.empty()) {
-			break;
-		}
-
-		// show the resulting frame
-		imshow("Frame", frame);
-	}
 }
 
 int computeMedian(std::vector<int> elements) {
